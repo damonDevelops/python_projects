@@ -64,7 +64,6 @@ class Couple:
             print("OK!")
             return
 
-        print("Got past all the exceptions... message should be sending")
 
 class Form(QDialog):
     def __init__(self, parent=None):
@@ -296,6 +295,14 @@ class Form(QDialog):
       for couple in self.couple_list:
         print("Currently sending message for: ", couple.first_name)
         couple.send_message(self.client, msid)
+
+      dlg = QMessageBox(self)
+      dlg.setWindowTitle("Success!")
+      dlg.setText("The messages were sent successfully! Happy Secret Santa! Merry Christmas!")
+      button = dlg.exec()
+      if button == QMessageBox.Ok:
+        print("OK!")
+        return
 
     def resetSS(self):
       print("Clicked")
