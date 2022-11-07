@@ -1,10 +1,10 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QDialog, QFormLayout, \
-    QListWidget, QLabel
+from PyQt5.QtWidgets import *
 from PyQt5.QtWidgets import QPushButton, QLineEdit, QMessageBox
-from PyQt5.QtCore import QLine
-from PyQt5.QtGui import QFont, QFontDatabase
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 from PyQt5 import QtCore, QtWidgets
+from PyQt5 import Qt
 
 # import uses Twilio REST client
 
@@ -88,6 +88,8 @@ class Form(QDialog):
 
         self.headingLabel.setStyleSheet('color: #0BD6A8; background-color: #D6001C;'
                 )
+          
+        self.headingLabel.setAlignment(QtCore.Qt.AlignCenter)
 
         self.twilioLabel = QLabel('Twilio Information')
         self.twilioLabel.setContentsMargins(0, 20, 0, 5)
@@ -175,8 +177,8 @@ class Form(QDialog):
         self.setLayout(layout)
 
         self.setWindowTitle('Secret Santa Twilio Application')
-        self.resize(700, 800)
-        self.setFixedSize(700,800)
+        self.resize(800, 7000)
+        self.setFixedSize(800,700)
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint,False)
 
     # button click event
