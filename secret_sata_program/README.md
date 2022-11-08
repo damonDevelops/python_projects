@@ -29,6 +29,10 @@ Steps to setup twilio correctly to run this application:
 8. Navigate to Auth Tokens & API keys, note down your Account SID and Auth Token (these will only be stored locally when running the program for security reasons)
 
 
+### Couple vs Individual
+* I've now made two seperate python programs! One for Secret santa as couples and one for individuals, hopefully at somepoint in the future I can merge these together as seperate tabs of the same application!
+
+
 ### Running the python file
 * Download zip and extract to folder
 * open christmas.py in vscode or respective IDE
@@ -39,21 +43,31 @@ OR
 * Open a terminal in respective folder
 * run 'python christmas.py' 
 
-### How to use
-* To use the app, first select either testing or working mode. Testing mode will allow you to see the message that would be sent if twilio account details were added. If working mode is tested the application will still work there will just be error output to the screen if the messages don't send, so I suggest using the testing mode!
+## How to use
+### Testing mode
+* Testing mode means you don't need to input any twilio information and you can see how the program would run if you did have an active twilio account
 * Add the event organiser name so you can get sweet juicy credit in the message!
 * Then, add couples detail information such as 'Damon, '+61487234556' and press add couple
 * Once you have at least two or three couples, hit send secret santa message.
 * If you're testing, a dialogue prompt will alert the user, showing them how the messages would've been sent
 * If you're working, the console will output as it is sending messages and a dialogue box will pop up to notify the user when all messages are successfully sent. If any fail the for loop aborts so make sure all the phone numbers are correct!
 
-### Additional Notes
+### Working mode
+* Same as above, except pressing ```send secret santa message``` will yield a warning if no twilio information is given
+* If twilio information is given, the program will likely succeed unless a twilio error occurs, which is printed to the screen
+
+## Importing Objects from CSV file
+* NEW: importing people/couples from CSV: I really like this feature, it allows you to select a CSV which automatically inserts all the objects to the list. Ensure the CSV file is as following:
+* Couples: first_name | first_number | second_name | second_number
+* Individuals: name | number
+
+## Additional Notes
 * Make sure your Twilio phone service is working before using the app, this can be done very easily on the Twilio website
 * When entering phone numbers, make sure the format is '+61 XXX XXX XXX' where 61 is your area code (no apostrophes needed)
 * Ensure you enter enough couples for the program to actually work, the algorithm works by making selectable people then removing them so the more the merrier!
 
 ### Building an executable
-* An executable can be made with Pyinstall by first running pip install pyinstaller then running ```pyinstaller.exe --onefile --windowed christmas.py```
+* An executable can be made with Pyinstall by first running pip install pyinstaller then running ```pyinstaller.exe --onefile --windowed christmas_individual.py``` or ```pyinstaller.exe --onefile --windowed christmas_couple.py``` 
 * If you run this executable, the font will not copy across, I have no idea why
 
 ## Built With
@@ -61,5 +75,5 @@ OR
 * Twilio
 * PyQt5
 
-### Contact Me!
+## Contact Me!
 If you have any feedback or questions, feel free to contact me [here](mailto:damon.oneil2@hotmail.com)
