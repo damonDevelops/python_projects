@@ -1,3 +1,5 @@
+import csv
+import os
 import re
 import sys
 from PyQt5.QtWidgets import *
@@ -5,7 +7,8 @@ from PyQt5.QtWidgets import QPushButton, QLineEdit, QMessageBox
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5 import QtCore, QtWidgets
-from PyQt5 import Qt
+from PyQt5.QtCore import QUrl
+import pandas as pd
 
 # import uses Twilio REST client
 
@@ -96,8 +99,12 @@ class Form(QDialog):
 
         self.workingMode = QtWidgets.QRadioButton("Working Mode")
         self.workingMode.toggled.connect(self.workingSelected)
-        
         self.workingBool = False
+
+        self.openFileButton = QPushButton()
+        self.openFileButton.setObjectName('openFile')
+        self.openFileButton.setText('Import Couples from CSV')
+        self.openFileButton.clicked.connect(self.openFile)
 
         self.twilioLabel = QLabel('Twilio Information')
         self.twilioLabel.setContentsMargins(0, 20, 0, 5)
@@ -169,7 +176,7 @@ class Form(QDialog):
         layout = QFormLayout()
 
         layout.addWidget(self.headingLabel)
-        
+        layout.addWidget(self.openFileButton)
         layout.addWidget(self.radioButtonTesting)
         layout.addWidget(self.workingMode)
 
@@ -205,7 +212,33 @@ class Form(QDialog):
         self.setFixedSize(800, 900)
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint,False)
 
-    # button click event
+    def openFile(self):
+      path = QFileDialog.getOpenFileName(self, 'Open CSV', os.getenv('HOME'), 'CSV(*.csv)')
+
+      try:
+        with open(path[0], 'r', encoding='utf-8-sig') as csvfile:
+          datareader = csv.reader(csvfile)
+          for row in datareader:
+            first_name = row[0]
+            first_number = '+' + row[1]
+            second_name = row[2]
+            second_number = '+' + row[3]
+            couple = Couple(first_name, first_number, second_name, second_number)
+            self.couple_list.append(couple)
+
+            couple_string = 'Name: ' + first_name + ', Phone: ' + first_number \
+              + ', Name: ' + second_name + ', Phone: ' + second_number
+
+            self.list.addItem(couple_string)
+      except Exception as e:
+        dlg = QMessageBox(self)
+        dlg.setWindowTitle("Error!")
+        dlg.setText("An error occured: " + str(e))
+        button = dlg.exec()
+        if button == QMessageBox.Ok:
+          print("OK!")
+          return
+
 
     def addCouple(self):
 
@@ -259,6 +292,15 @@ class Form(QDialog):
     def sendMessage(self):
       if(self.testingBool == True):
         print("Testing mode")
+
+        if not self.organiser.text():
+          dlg = QMessageBox(self)
+          dlg.setWindowTitle("Error!")
+          dlg.setText("No organiser field! Make sure you add that bad boy for all the credit! :)")
+          button = dlg.exec()
+          if button == QMessageBox.Ok:
+            print("OK!")
+            return
 
         # Check that couplex exist
         if self.list.count() <= 1 :
