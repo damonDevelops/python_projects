@@ -39,6 +39,14 @@ OR
 * Open a terminal in respective folder
 * run 'python christmas.py' 
 
+### How to use
+* To use the app, first select either testing or working mode. Testing mode will allow you to see the message that would be sent if twilio account details were added. If working mode is tested the application will still work there will just be error output to the screen if the messages don't send, so I suggest using the testing mode!
+* Add the event organiser name so you can get sweet juicy credit in the message!
+* Then, add couples detail information such as 'Damon, '+61487234556' and press add couple
+* Once you have at least two or three couples, hit send secret santa message.
+* If you're testing, a dialogue prompt will alert the user, showing them how the messages would've been sent
+* If you're working, the console will output as it is sending messages and a dialogue box will pop up to notify the user when all messages are successfully sent. If any fail the for loop aborts so make sure all the phone numbers are correct!
+
 ### Additional Notes
 * Make sure your Twilio phone service is working before using the app, this can be done very easily on the Twilio website
 * When entering phone numbers, make sure the format is '+61 XXX XXX XXX' where 61 is your area code (no apostrophes needed)
