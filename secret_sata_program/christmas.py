@@ -1,3 +1,4 @@
+import re
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtWidgets import QPushButton, QLineEdit, QMessageBox
@@ -14,6 +15,8 @@ import random
 
 # Couple class for holding the couples with their first name and phone number
 
+failed_to_send = False
+
 class Couple:
 
     def __init__(
@@ -28,6 +31,7 @@ class Couple:
         self.second_name = second_name
         self.second_number = second_number
         self.couple_pool = []
+        self.failed_to_send = False
 
     def set_secretSanta(self, x):
         self.secretSanta = x
@@ -35,35 +39,30 @@ class Couple:
     def addToCouplePool(self, couple):
         self.couple_pool.append(couple)
 
-    def send_message(self, client, messaging_sid):
+    def send_message(self, client, messaging_sid, organiser):
         print("Got to send message function")
 
-        try:
-          # the twilio client sends two messages, one to each couple member
-          message = client.messages.create(  
-            messaging_service_sid=messaging_sid, 
-            body= 'Merry Christmas ' + self.first_name + 
-              ", your secret santa couple is: " + self.secretSanta.first_name + ' & ' + self.secretSanta.second_name + ', '
-              "Programmed by yours truly, Damon",   
-            to= self.first_number 
-          )
+        # the twilio client sends two messages, one to each couple member
+        message = client.messages.create(  
+          messaging_service_sid=messaging_sid, 
+          body= 'Merry Christmas ' + self.first_name + 
+            ", your secret santa couple is: " + self.secretSanta.first_name + ' & ' + self.secretSanta.second_name + ', '
+            "Programmed by yours truly, " + organiser,   
+          to= self.first_number 
+        )
 
-          message2 = client.messages.create(  
-            messaging_service_sid=messaging_sid, 
-            body= 'Merry Christmas ' + self.second_name + 
-              ", your secret santa couple is: " + self.secretSanta.first_name + ' & ' + self.secretSanta.second_name + ', '
-              "Programmed by yours truly, Damon", 
-            to= self.second_number 
-          )
-        except Exception as e:
-          dlg = QMessageBox(self)
-          dlg.setWindowTitle("Error!")
-          dlg.setText("An error occured while sending the messages\n It's likely a phone number was wrong or the Twilio details were incorrect: \n",str(e))
-          button = dlg.exec()
-          if button == QMessageBox.Ok:
-            print("OK!")
-            return
+        message2 = client.messages.create(  
+          messaging_service_sid=messaging_sid, 
+          body= 'Merry Christmas ' + self.second_name + 
+            ", your secret santa couple is: " + self.secretSanta.first_name + ' & ' + self.secretSanta.second_name + ', '
+            "Programmed by yours truly, Damon", 
+          to= self.second_number 
+        )
+        
 
+def escape_ansi(line):
+    ansi_escape =re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
+    return ansi_escape.sub('', line)
 
 class Form(QDialog):
     def __init__(self, parent=None):
@@ -74,7 +73,7 @@ class Form(QDialog):
         QFontDatabase.addApplicationFont('Christmas Bell - Personal Use.otf'
                 )
         heading_font = QFont('Christmas Bell - Personal Use')
-        heading_font.setPointSize(42)
+        heading_font.setPointSize(50)
 
         h2Font = QFont()
         h2Font.setPointSize(18)
@@ -90,14 +89,23 @@ class Form(QDialog):
           
         self.headingLabel.setAlignment(QtCore.Qt.AlignCenter)
 
+        self.radioButtonTesting = QtWidgets.QRadioButton("Testing Mode")
+        self.radioButtonTesting.setChecked(True)
+        self.radioButtonTesting.toggled.connect(self.testingSelected)
+        self.testingBool = True
+
+        self.workingMode = QtWidgets.QRadioButton("Working Mode")
+        self.workingMode.toggled.connect(self.workingSelected)
+        
+        self.workingBool = False
+
         self.twilioLabel = QLabel('Twilio Information')
         self.twilioLabel.setContentsMargins(0, 20, 0, 5)
         self.twilioLabel.setFont(h2Font)
 
         self.account_sid = QLineEdit()
         self.account_sid.setObjectName('sid')
-        self.account_sid.setPlaceholderText('Enter your twilio account SID'
-                )
+        self.account_sid.setPlaceholderText('Enter your twilio account SID')
         self.setFont(textFont)
         self.account_sid.setEchoMode(QtWidgets.QLineEdit.Password)
 
@@ -110,6 +118,14 @@ class Form(QDialog):
         self.messaging_sid.setObjectName('msgSid')
         self.messaging_sid.setPlaceholderText('Enter your twilio messaging service SID')
         self.messaging_sid.setEchoMode(QtWidgets.QLineEdit.Password)
+
+        self.organiserLabel = QLabel('Organiser Information')
+        self.organiserLabel.setContentsMargins(0, 20, 0, 5)
+        self.organiserLabel.setFont(h2Font)
+
+        self.organiser = QLineEdit()
+        self.organiser.setObjectName('organiser')
+        self.organiser.setPlaceholderText('Organiser Name')
 
         self.coupleLabel = QLabel('Couple Information')
         self.coupleLabel.setContentsMargins(0, 20, 0, 5)
@@ -153,12 +169,22 @@ class Form(QDialog):
         layout = QFormLayout()
 
         layout.addWidget(self.headingLabel)
+        
+        layout.addWidget(self.radioButtonTesting)
+        layout.addWidget(self.workingMode)
+
+        layout.addWidget(self.organiserLabel)
+        layout.addWidget(self.organiser)
+
+        
+
         layout.addWidget(self.twilioLabel)
 
         layout.addWidget(self.account_sid)
         layout.addWidget(self.account_auth)
         layout.addWidget(self.messaging_sid)
 
+        
         layout.addWidget(self.coupleLabel)
 
         layout.addWidget(self.couple_f_name)
@@ -176,8 +202,7 @@ class Form(QDialog):
         self.setLayout(layout)
 
         self.setWindowTitle('Secret Santa Twilio Application')
-        self.resize(800, 7000)
-        self.setFixedSize(800,700)
+        self.setFixedSize(800, 900)
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint,False)
 
     # button click event
@@ -221,88 +246,182 @@ class Form(QDialog):
         self.couple_f_phone.setText('')
         self.couple_s_phone.setText('')
 
+    def testingSelected(self, selected):
+      if selected:
+        self.testingBool = True
+        self.workingBool = False
+    
+    def workingSelected(self, selected):
+      if selected:
+        self.testingBool = False
+        self.workingBool = True
+
     def sendMessage(self):
-      print("Got to the start of Send Message")
+      if(self.testingBool == True):
+        print("Testing mode")
 
-      if not self.account_sid.text() or not self.account_auth.text():
+        # Check that couplex exist
+        if self.list.count() <= 1 :
+          dlg = QMessageBox(self)
+          dlg.setWindowTitle("Error!")
+          dlg.setText("You entered less than two couples... How you gonna do secret santa all by yourself?")
+          button = dlg.exec()
+          if button == QMessageBox.Ok:
+            print("OK!")
+            return
+
+        print("No worries with fields")
+
+        try:
+          for couple in self.couple_list:
+              for p in self.couple_list:
+                  if p.first_name != couple.first_name:
+                      if p not in couple.couple_pool:
+                          couple.addToCouplePool(p)
+        except Exception as e:
+          dlg = QMessageBox(self)
+          dlg.setWindowTitle("Error!")
+          dlg.setText("An error occured while making couple pools: \n",str(e))
+          button = dlg.exec()
+          if button == QMessageBox.Ok:
+            print("OK!")
+            return
+
+        print("Made couple pools")
+
+        try:
+          for couple in self.couple_list:
+              random_couple = random.choice(couple.couple_pool)
+              couple.set_secretSanta(random_couple)
+
+              if couple in random_couple.couple_pool:
+                  random_couple.couple_pool.remove(couple)
+
+              for x in self.couple_list:
+                if random_couple in x.couple_pool:
+                  x.couple_pool.remove(random_couple)
+        except Exception as e:
+          dlg = QMessageBox(self)
+
+          dlg.setWindowTitle("Error!")
+          dlg.setText("An error occured while assigning secret santas to couples: \n",str(e))
+          button = dlg.exec()
+          if button == QMessageBox.Ok:
+            print("OK!")
+            return
+
+        print("Assigned secret santas")
+
+        secret_santas_message = ""
+        for couple in self.couple_list:   
+          secret_santas_message += ("Pretend message sent to (" + couple.first_number + "): " + "Merry Christmas " + couple.first_name  +
+            ", your secret santa couple is: " + couple.secretSanta.first_name + ' & ' + couple.secretSanta.second_name + ", sent by yours truly, " + self.organiser.text() + "\n")
+
+          secret_santas_message += ("Pretend message sent to (" + couple.second_number + "): " + "Merry Christmas " + couple.second_name  +
+            ", your secret santa couple is: " + couple.secretSanta.first_name + ' & ' + couple.secretSanta.second_name + ", sent by yours truly, " + self.organiser.text() + "\n")
+
         dlg = QMessageBox(self)
-        dlg.setWindowTitle("Error!")
-        dlg.setText("You've missed a field, make sure all details are there and try again :)")
+        dlg.setWindowTitle("Merry Christmas!")
+        dlg.setText(secret_santas_message)
+        dlg.resize(400,400)
         button = dlg.exec()
         if button == QMessageBox.Ok:
           print("OK!")
           return
+        
+      if(self.workingBool):
+        print("Working mode")
+        print("Got to the start of Send Message")
 
-      print("No worries with fields")
+        if not self.account_sid.text() or not self.account_auth.text():
+          dlg = QMessageBox(self)
+          dlg.setWindowTitle("Error!")
+          dlg.setText("You've missed a field, make sure all details are there and try again :)")
+          button = dlg.exec()
+          if button == QMessageBox.Ok:
+            print("OK!")
+            return
 
-      self.client = Client(self.account_sid.text(),
-                            self.account_auth.text())
+        print("No worries with fields")
 
-      print("Client made")
+        self.client = Client(self.account_sid.text(),
+                              self.account_auth.text())
 
-      msid = self.messaging_sid.text()
+        print("Client made")
 
-      print("Msid made")
+        msid = self.messaging_sid.text()
 
-      if self.list.count() <= 1 :
+        print("Msid made")
+
+        if self.list.count() <= 1 :
+          dlg = QMessageBox(self)
+          dlg.setWindowTitle("Error!")
+          dlg.setText("You entered less than two couples... How you gonna do secret santa all by yourself?")
+          button = dlg.exec()
+          if button == QMessageBox.Ok:
+            print("OK!")
+            return
+
+        try:
+          for couple in self.couple_list:
+              for p in self.couple_list:
+                  if p.first_name != couple.first_name:
+                      if p not in couple.couple_pool:
+                          couple.addToCouplePool(p)
+        except Exception as e:
+          dlg = QMessageBox(self)
+          dlg.setWindowTitle("Error!")
+          dlg.setText("An error occured while making couple pools: \n",str(e))
+          button = dlg.exec()
+          if button == QMessageBox.Ok:
+            print("OK!")
+            return
+
+        print("Made couple pools")
+
+        try:
+          for couple in self.couple_list:
+              random_couple = random.choice(couple.couple_pool)
+              couple.set_secretSanta(random_couple)
+
+              if couple in random_couple.couple_pool:
+                  random_couple.couple_pool.remove(couple)
+
+              for x in self.couple_list:
+                if random_couple in x.couple_pool:
+                  x.couple_pool.remove(random_couple)
+        except Exception as e:
+          dlg = QMessageBox(self)
+          dlg.setWindowTitle("Error!")
+          dlg.setText(str(e))
+          button = dlg.exec()
+          if button == QMessageBox.Ok:
+            print("OK!")
+            return
+
+        print("Assigned secret santas")
+        
+        try:
+          for couple in self.couple_list:
+            print("Currently sending message for: ", couple.first_name)
+            couple.send_message(self.client, msid, self.organiser.text())
+        except Exception as e:
+          print_string = escape_ansi(str(e))
+          dlg = QMessageBox(self)
+          dlg.setWindowTitle("Error!")
+          dlg.setText("An error occured while sending the messages\n It's likely a phone number was wrong or the Twilio details were incorrect: \n" + print_string)
+          print(print_string)
+          button = dlg.exec()
+          if button == QMessageBox.Ok:
+            return
+
         dlg = QMessageBox(self)
-        dlg.setWindowTitle("Error!")
-        dlg.setText("You entered less than two couples... How you gonna do secret santa all by yourself?")
+        dlg.setWindowTitle("Success!")
+        dlg.setText("The messages were sent successfully! Happy Secret Santa! Merry Christmas!")
         button = dlg.exec()
         if button == QMessageBox.Ok:
           print("OK!")
           return
-
-      try:
-        for couple in self.couple_list:
-            for p in self.couple_list:
-                if p.first_name != couple.first_name:
-                    if p not in couple.couple_pool:
-                        couple.addToCouplePool(p)
-      except Exception as e:
-        dlg = QMessageBox(self)
-        dlg.setWindowTitle("Error!")
-        dlg.setText("An error occured while making couple pools: \n",str(e))
-        button = dlg.exec()
-        if button == QMessageBox.Ok:
-          print("OK!")
-          return
-
-      print("Made couple pools")
-
-      try:
-        for couple in self.couple_list:
-            random_couple = random.choice(couple.couple_pool)
-            couple.set_secretSanta(random_couple)
-
-            if couple in random_couple.couple_pool:
-                random_couple.couple_pool.remove(couple)
-
-            for x in self.couple_list:
-              if random_couple in x.couple_pool:
-                x.couple_pool.remove(random_couple)
-      except Exception as e:
-        dlg = QMessageBox(self)
-        dlg.setWindowTitle("Error!")
-        dlg.setText("An error occured while assigning secret santas to couples: \n",str(e))
-        button = dlg.exec()
-        if button == QMessageBox.Ok:
-          print("OK!")
-          return
-
-      print("Assigned secret santas")
-      
-      for couple in self.couple_list:
-        print("Currently sending message for: ", couple.first_name)
-        couple.send_message(self.client, msid)
-
-      dlg = QMessageBox(self)
-      dlg.setWindowTitle("Success!")
-      dlg.setText("The messages were sent successfully! Happy Secret Santa! Merry Christmas!")
-      button = dlg.exec()
-      if button == QMessageBox.Ok:
-        print("OK!")
-        return
 
     def resetSS(self):
       print("Clicked")
@@ -312,6 +431,7 @@ class Form(QDialog):
       self.couple_s_phone.setText('')
       self.account_sid.setText('')
       self.account_auth.setText('')
+      self.messaging_sid.setText('')
       self.couple_list.clear()
       self.list.clear()
       
